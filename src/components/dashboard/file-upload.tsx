@@ -47,6 +47,8 @@ export function FileUpload({ onUpload }: FileUploadProps) {
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       handleFiles(e.target.files);
+      onUpload(e.target.files);
+      
     }
   };
 
@@ -94,7 +96,7 @@ export function FileUpload({ onUpload }: FileUploadProps) {
       if (progress >= 100) {
         clearInterval(interval);
         setIsUploading(false);
-        await handleSendFileToPythonServer();
+        // await handleSendFileToPythonServer();
         onUpload(fileListFromArray(selectedFiles));
         setSelectedFiles([]);
         setUploadProgress(0);

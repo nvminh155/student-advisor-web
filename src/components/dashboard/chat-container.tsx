@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
+import ReactMarkdown from "react-markdown";
+
 interface Message {
   id: string;
   content: string;
@@ -109,11 +111,11 @@ export function ChatContainer() {
       <CardHeader>
         <CardTitle>Chat with Bot</CardTitle>
         <CardDescription>
-          Select a PDF file and ask questions about its content.
+          Chat to check the content of the PDF file. Ask me anything about it.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="h-full">
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -143,7 +145,9 @@ export function ChatContainer() {
                         : "bg-muted"
                     }`}
                   >
-                    <p className="text-sm">{message.content}</p>
+                    <p className="text-sm">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </p>
                     <p className="text-xs mt-1 opacity-70">
                       {new Intl.DateTimeFormat("en-US", {
                         hour: "2-digit",

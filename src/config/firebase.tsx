@@ -8,13 +8,12 @@ import { getAuth } from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyC0DsGjmizVQizEiOUe4kMqpDCIx6IfmEU",
-  authDomain: "m-o-plans.firebaseapp.com",
-  databaseURL: "https://m-o-plans-default-rtdb.firebaseio.com",
-  projectId: "m-o-plans",
-  storageBucket: "m-o-plans.firebasestorage.app",
-  messagingSenderId: "771337698600",
-  appId: "1:771337698600:web:602fa22a5e91bea843e41d"
+  apiKey: "AIzaSyCYvuG-omeeglBxscR_EmLgqZSfrgaY704",
+  authDomain: "student-advisor-app-75a11.firebaseapp.com",
+  projectId: "student-advisor-app-75a11",
+  storageBucket: "student-advisor-app-75a11.firebasestorage.app",
+  messagingSenderId: "331906216455",
+  appId: "1:331906216455:web:cb2c0ecca79c29f72570a2"
 };
 
 // Initialize Firebase

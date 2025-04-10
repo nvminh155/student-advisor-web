@@ -5,7 +5,6 @@ import {
   collection,
   getDocs,
   doc,
-  setDoc,
   deleteDoc,
   updateDoc,
   query,
@@ -14,14 +13,24 @@ import {
 import { toast } from "sonner";
 import { db } from "@/config/firebase";
 import { Button } from "@/components/ui/button";
+import UploadFileComponent from "./upload-file-component";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { v4 as uuidv4 } from "uuid";
 
-interface Document {
+export interface IDocument {
   id: string;
   documentNumber: string;
   date: string;
   title: string;
   isActive: boolean;
   year: number;
+  uploaded_files: FileList | null;
 }
 
 interface DocumentsTableProps {
@@ -29,17 +38,21 @@ interface DocumentsTableProps {
 }
 
 export function DocumentsTable({ year }: DocumentsTableProps) {
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<IDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [currentDocument, setCurrentDocument] = useState<Document | null>(null);
-  const [formData, setFormData] = useState({
+  const [currentDocument, setCurrentDocument] = useState<IDocument | null>(null);
+
+  const [formData, setFormData] = useState<IDocument>({
     documentNumber: "",
     date: "",
     title: "",
     isActive: true,
+    uploaded_files: null,
+    id: uuidv4(),
+    year: parseInt(year),
   });
 
   // Fetch documents from Firebase
@@ -52,10 +65,10 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
           where("year", "==", parseInt(year))
         );
         const querySnapshot = await getDocs(q);
-        const fetchedDocuments: Document[] = [];
+        const fetchedDocuments: IDocument[] = [];
 
         querySnapshot.forEach((doc) => {
-          fetchedDocuments.push({ id: doc.id, ...doc.data() } as Document);
+          fetchedDocuments.push({ id: doc.id, ...doc.data() } as IDocument);
         });
 
         setDocuments(fetchedDocuments);
@@ -87,26 +100,54 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
       date: "",
       title: "",
       isActive: true,
+      uploaded_files: null,
+      id: uuidv4(),
+      year: parseInt(year),
     });
   };
 
   const handleAddDocument = async () => {
+    console.log(formData);
     try {
-      const newDocument = {
-        ...formData,
-        year: parseInt(year),
-        id: Math.random().toString(36).substring(2, 9),
-      };
+      const payload_formdata = new FormData();
 
-      await setDoc(doc(db, "documents", newDocument.id), newDocument);
+      if (!formData.uploaded_files) {
+        toast("Error", {
+          description: "Please upload files.",
+          richColors: true,
+        });
+        return;
+      }
 
-      setDocuments([...documents, newDocument as Document]);
-      setIsAddDialogOpen(false);
+      for (const file of formData.uploaded_files) {
+        payload_formdata.append("uploaded_files", file);
+      }
+
+      payload_formdata.append("documentNumber", formData.documentNumber);
+      payload_formdata.append("date", formData.date);
+      payload_formdata.append("title", formData.title);
+      payload_formdata.append("isActive", formData.isActive.toString());
+      payload_formdata.append("year", year);
+      payload_formdata.append("id", formData.id);
+
+      const res1 = await fetch("http://localhost:8000/upload", {
+        method: "POST",
+        body: payload_formdata,
+      });
+
+      const data = await res1.json();
+      console.log("res1", data, res1);
+
+      if (data.err) {
+        throw new Error(data.err);
+      }
+
       resetForm();
-
+      
       toast("Success", {
         description: "Document added successfully.",
       });
+      setIsAddDialogOpen(false);
     } catch (error) {
       console.error("Error adding document:", error);
       toast("Error", {
@@ -171,7 +212,7 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
     }
   };
 
-  const handleToggleActive = async (document: Document) => {
+  const handleToggleActive = async (document: IDocument) => {
     try {
       const updatedDocument = { ...document, isActive: !document.isActive };
 
@@ -196,28 +237,41 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
     }
   };
 
-  const openEditDialog = (document: Document) => {
-    setCurrentDocument(document);
-    setFormData({
-      documentNumber: document.documentNumber,
-      date: document.date,
-      title: document.title,
-      isActive: document.isActive,
-    });
-    setIsEditDialogOpen(true);
+  const handleFileUpload = async (files: FileList) => {
+    // In a real application, you would upload these files to your server
+    // This is just a mock implementation
+
+    // setUploadedFiles((prev) => [...prev, ...newFiles]);
+    setFormData((prev) => ({
+      ...prev,
+      uploaded_files: files,
+    }));
   };
 
-  const openDeleteDialog = (document: Document) => {
-    setCurrentDocument(document);
-    setIsDeleteDialogOpen(true);
-  };
+  // const openEditDialog = (document: IDocument) => {
+  //   setCurrentDocument(document);
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     documentNumber: document.documentNumber,
+  //     date: document.date,
+  //     title: document.title,
+  //     isActive: document.isActive,
+  //     uploaded_files: document.uploaded_files,
+  //   }));
+  //   setIsEditDialogOpen(true);
+  // };
+
+  // const openDeleteDialog = (document: IDocument) => {
+  //   setCurrentDocument(document);
+  //   setIsDeleteDialogOpen(true);
+  // };
 
   return (
     <div className="bg-white rounded-lg border shadow-sm">
       <div className="flex flex-row items-center justify-between p-6 border-b">
         <h2 className="text-xl font-semibold">Văn bản năm {year}</h2>
         <Button
-        variant={"secondary"}
+          variant={"default"}
           className="items-center justify-center rounded-md px-4 py-2 text-sm font-medium"
           onClick={() => setIsAddDialogOpen(true)}
         >
@@ -247,9 +301,9 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
                   <th className="py-3 px-4 text-center font-medium text-gray-500">
                     Active
                   </th>
-                  <th className="py-3 px-4 text-right font-medium text-gray-500">
+                  {/* <th className="py-3 px-4 text-right font-medium text-gray-500">
                     Thao tác
-                  </th>
+                  </th> */}
                 </tr>
               </thead>
               <tbody>
@@ -283,7 +337,7 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      {/* <td className="py-3 px-4 text-right">
                         <div className="flex justify-end space-x-2">
                           <button
                             className="p-1 rounded-md hover:bg-gray-100"
@@ -298,7 +352,7 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
-                      </td>
+                      </td> */}
                     </tr>
                   ))
                 )}
@@ -310,13 +364,16 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
 
       {/* Add Dialog */}
       {isAddDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-1">Thêm văn bản mới</h3>
-              <p className="text-sm text-gray-500 mb-4">
+        <Dialog defaultOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogContent className="h-[80%] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Thêm văn bản mới</DialogTitle>
+              <DialogDescription>
                 Điền thông tin văn bản mới vào form dưới đây.
-              </p>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label
@@ -364,6 +421,10 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
                     className="col-span-3 px-3 py-2 border rounded-md"
                   />
                 </div>
+
+                <div>
+                  <UploadFileComponent handleFileUpload={handleFileUpload} />
+                </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label
                     htmlFor="isActive"
@@ -389,44 +450,52 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end space-x-2 mt-4">
-                <button
-                  className="px-4 py-2 border rounded-md hover:bg-gray-50"
-                  onClick={() => setIsAddDialogOpen(false)}
-                >
-                  Hủy
-                </button>
-                <button
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  onClick={handleAddDocument}
-                >
-                  Lưu
-                </button>
-              </div>
             </div>
-          </div>
-        </div>
+
+            <div className="flex justify-end space-x-2 mt-4">
+              <Button
+                variant={"secondary"}
+                className="px-4 py-2 border rounded-md"
+                onClick={() => setIsAddDialogOpen(false)}
+              >
+                Hủy
+              </Button>
+              <Button
+                className="px-4 py-2 text-white rounded-md"
+                onClick={handleAddDocument}
+              >
+                Lưu
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Edit Dialog */}
       {isEditDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-1">Chỉnh sửa văn bản</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                Chỉnh sửa thông tin văn bản.
-              </p>
+        <Dialog
+          defaultOpen={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+        >
+          <DialogContent className="h-[80%] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Thêm văn bản mới</DialogTitle>
+              <DialogDescription>
+                Điền thông tin văn bản mới vào form dưới đây.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label
-                    htmlFor="edit-documentNumber"
+                    htmlFor="documentNumber"
                     className="text-right text-sm font-medium"
                   >
                     Số
                   </label>
                   <input
-                    id="edit-documentNumber"
+                    id="documentNumber"
                     name="documentNumber"
                     value={formData.documentNumber}
                     onChange={handleInputChange}
@@ -435,13 +504,13 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label
-                    htmlFor="edit-date"
+                    htmlFor="date"
                     className="text-right text-sm font-medium"
                   >
                     Ngày hiệu lực
                   </label>
                   <input
-                    id="edit-date"
+                    id="date"
                     name="date"
                     type="date"
                     value={formData.date}
@@ -451,22 +520,26 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label
-                    htmlFor="edit-title"
+                    htmlFor="title"
                     className="text-right text-sm font-medium"
                   >
                     Tên văn bản
                   </label>
                   <input
-                    id="edit-title"
+                    id="title"
                     name="title"
                     value={formData.title}
                     onChange={handleInputChange}
                     className="col-span-3 px-3 py-2 border rounded-md"
                   />
                 </div>
+
+                <div>
+                  <UploadFileComponent handleFileUpload={handleFileUpload} />
+                </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label
-                    htmlFor="edit-isActive"
+                    htmlFor="isActive"
                     className="text-right text-sm font-medium"
                   >
                     Kích hoạt
@@ -476,7 +549,7 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
                       <input
                         type="checkbox"
                         className="sr-only peer"
-                        id="edit-isActive"
+                        id="isActive"
                         name="isActive"
                         checked={formData.isActive}
                         onChange={handleInputChange}
@@ -489,52 +562,137 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
                   </div>
                 </div>
               </div>
-              <div className="flex justify-end space-x-2 mt-4">
-                <button
-                  className="px-4 py-2 border rounded-md hover:bg-gray-50"
-                  onClick={() => setIsEditDialogOpen(false)}
-                >
-                  Hủy
-                </button>
-                <button
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                  onClick={handleEditDocument}
-                >
-                  Lưu thay đổi
-                </button>
-              </div>
             </div>
-          </div>
-        </div>
+
+            <div className="flex justify-end space-x-2 mt-4">
+              <Button
+                variant={"secondary"}
+                className="px-4 py-2 border rounded-md"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
+                Hủy
+              </Button>
+              <Button
+                className="px-4 py-2 text-white rounded-md"
+                onClick={handleEditDocument}
+              >
+                Lưu
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Delete Dialog */}
       {isDeleteDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold mb-1">Xác nhận xóa</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                Bạn có chắc chắn muốn xóa văn bản này không? Hành động này không
-                thể hoàn tác.
-              </p>
-              <div className="flex justify-end space-x-2 mt-4">
-                <button
-                  className="px-4 py-2 border rounded-md hover:bg-gray-50"
-                  onClick={() => setIsDeleteDialogOpen(false)}
-                >
-                  Hủy
-                </button>
-                <button
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                  onClick={handleDeleteDocument}
-                >
-                  Xóa
-                </button>
+        <Dialog
+          defaultOpen={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+        >
+          <DialogContent className="h-[80%] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Thêm văn bản mới</DialogTitle>
+              <DialogDescription>
+                Điền thông tin văn bản mới vào form dưới đây.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label
+                    htmlFor="documentNumber"
+                    className="text-right text-sm font-medium"
+                  >
+                    Số
+                  </label>
+                  <input
+                    id="documentNumber"
+                    name="documentNumber"
+                    value={formData.documentNumber}
+                    onChange={handleInputChange}
+                    className="col-span-3 px-3 py-2 border rounded-md"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label
+                    htmlFor="date"
+                    className="text-right text-sm font-medium"
+                  >
+                    Ngày hiệu lực
+                  </label>
+                  <input
+                    id="date"
+                    name="date"
+                    type="date"
+                    value={formData.date}
+                    onChange={handleInputChange}
+                    className="col-span-3 px-3 py-2 border rounded-md"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label
+                    htmlFor="title"
+                    className="text-right text-sm font-medium"
+                  >
+                    Tên văn bản
+                  </label>
+                  <input
+                    id="title"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    className="col-span-3 px-3 py-2 border rounded-md"
+                  />
+                </div>
+
+                <div>
+                  <UploadFileComponent handleFileUpload={handleFileUpload} />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label
+                    htmlFor="isActive"
+                    className="text-right text-sm font-medium"
+                  >
+                    Kích hoạt
+                  </label>
+                  <div className="col-span-3 flex items-center space-x-2">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        id="isActive"
+                        name="isActive"
+                        checked={formData.isActive}
+                        onChange={handleInputChange}
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                    <span className="text-sm">
+                      {formData.isActive ? "Đang kích hoạt" : "Không kích hoạt"}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+
+            <div className="flex justify-end space-x-2 mt-4">
+              <Button
+                variant={"secondary"}
+                className="px-4 py-2 border rounded-md"
+                onClick={() => setIsDeleteDialogOpen(false)}
+              >
+                Hủy
+              </Button>
+              <Button
+                className="px-4 py-2 text-white rounded-md"
+                onClick={handleDeleteDocument}
+              >
+                Lưu
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

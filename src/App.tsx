@@ -4,6 +4,7 @@ import ManageFilePage from "./pages/dashboard/manage-file/year";
 import DashBoardLayout from "./components/dashboard/layout";
 import ManageFile from "./pages/dashboard/manage-file";
 import { ChatContainer } from "./components/dashboard/chat-container";
+import LoginPage from "./pages/login";
 
 function App() {
 
@@ -14,7 +15,9 @@ function App() {
         <Route path="chat" element={<ChatContainer />} />
         <Route path="manage-file" element={<ManageFile />} />
         <Route path="manage-file/:year" element={<ManageFilePage />} />
+
       </Route>
+      <Route path="/login" element={<LoginPage />} />
     </Routes>
   );
 }
