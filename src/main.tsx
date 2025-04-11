@@ -5,14 +5,17 @@ import "./index.css";
 import App from "./App.tsx";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "./contexts/auth-context.tsx";
+import { DocumentContractProvider } from "./contexts/document-contract-context.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <App />
-        <Toaster />
-      </AuthProvider>
+      <DocumentContractProvider>
+        <AuthProvider>
+          <App />
+          <Toaster />
+        </AuthProvider>
+      </DocumentContractProvider>
     </BrowserRouter>
   </StrictMode>
 );
