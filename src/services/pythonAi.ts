@@ -75,6 +75,8 @@ export const pythonAiService = {
       if (data.err) {
         throw new Error(data.err);
       }
+
+      return data;
     } catch (error) {
       return error;
     }

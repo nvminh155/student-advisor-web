@@ -9,6 +9,7 @@ import RegisterPage from "./pages/auth/register";
 import AdminUsersPage from "./pages/admin/users";
 import AdminLayout from "./pages/admin/admin-layout";
 import MasterUserLayout from "./pages/masteruser/masteruser-layout";
+import FileDetail from "./pages/dashboard/manage-file/year/detail";
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
 
       <Route path="/master-user" element={<MasterUserLayout />}>
         <Route index path="ban-hanh" element={<ManageFilePage />} />
+        <Route index path="ban-hanh/:id" element={<FileDetail />} />
       </Route>
 
 

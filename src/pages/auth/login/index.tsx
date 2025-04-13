@@ -34,16 +34,20 @@ export default function LoginPage() {
     const contract = await getEthereumContract();
 
     await contract.handleLogin().then(user => {
-      console.log("User:", user);
+      
       if(!user) return;
-
-      if(user.status === 1n) {
+      
+      console.log("User:", typeof user.role);
+      if(user.role == 1) {
         navigate("/admin1")
       }
 
-      if(user.status === 3n) {
+      if(user.role == 3) {
         navigate("/master-user")
       }
+
+      //add login as nhan vien
+      
     }).catch(err => {
       console.error("Error checking user:", err);
       toast("Login failed")

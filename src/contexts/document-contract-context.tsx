@@ -3,7 +3,7 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 import { ethers, isAddress, parseEther, toBeHex } from "ethers";
 import documentContract from "@/utils/DocumentContract.json";
 
-const contractAddress = "0x49bbe2226bf8120091cf20518f2f21178d744664"; // Replace with your contract address
+const contractAddress = "0x25ba54226e88ccb9d67a2d6bb07910940cbfebf2"; // Replace with your contract address
 const abi = documentContract.abi;
 
 declare global {

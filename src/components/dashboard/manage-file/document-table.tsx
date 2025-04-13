@@ -43,7 +43,7 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
   const { getEthereumContract } = useDocumentContractContext();
 
   const [documents, setDocuments] = useState<IDocument[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -63,33 +63,28 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
 
   // Fetch documents from Firebase
   useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        setLoading(true);
-        const q = query(
-          collection(db, "documents"),
-          where("year", "==", parseInt(year))
+
+    const fetchDocumentOnContract = async () => {
+      const contract = await getEthereumContract();
+      await contract.getAllRecords().then((tx) => {
+        console.log(tx);
+
+        setDocuments(
+          tx.map((item: any, i: number) => {
+            return {
+              documentNumber: item.documentNumber,
+              date: item.createdAt,
+              title: item.title,
+              isActive: item.status === "active" ? true : false,
+              id: item.id,
+              year: item.createdAt.split("-")[0],
+              uploaded_files: null,
+            } as IDocument;
+          })
         );
-        const querySnapshot = await getDocs(q);
-        const fetchedDocuments: IDocument[] = [];
-
-        querySnapshot.forEach((doc) => {
-          fetchedDocuments.push({ id: doc.id, ...doc.data() } as IDocument);
-        });
-
-        setDocuments(fetchedDocuments);
-      } catch (error) {
-        console.error("Error fetching documents:", error);
-        toast("Error", {
-          description: "Failed to fetch documents. Please try again.",
-          richColors: true,
-        });
-      } finally {
-        setLoading(false);
-      }
+      });
     };
-
-    fetchDocuments();
+    fetchDocumentOnContract();
   }, [year]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,24 +119,38 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
     await tx.wait();
   };
 
-
   const handleAddDocument = async () => {
-    await pythonAiService
-      .addDocument(formData, year)
-      .then(() => {
-        resetForm();
+   
+    const contract = await getEthereumContract();
+    try {
+      await pythonAiService
+        .addDocument(formData, year)
+        .then(async (res) => {
+          console.log(res);
+          await contract
+            .createRecord(
+              formData.documentNumber,
+              formData.title,
+              res.filename.slice(0, 4).join("</br>"),
+              formData.date,
+            )
+            .then((tx) => console.log("MY TEX", tx));
 
-        toast("Success", {
-          description: "Document added successfully.",
+          resetForm();
+
+          toast("Success", {
+            description: "Document added successfully.",
+          });
+          setIsAddDialogOpen(false);
+        })
+        .catch((error) => {
+          console.error("Error adding document:", error);
         });
-        setIsAddDialogOpen(false);
-      })
-      .catch((error) => {
-        toast("Error", {
-          description: error,
-          richColors: true,
-        });
+    } catch {
+      toast("Error", {
+        description: "",
       });
+    }
   };
 
   const handleEditDocument = async () => {
@@ -310,7 +319,10 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
                         {new Date(document.date).toLocaleDateString("vi-VN")}
                       </td>
                       <td className="py-3 px-4 max-w-md">
-                        <a href="#" className="text-blue-500 hover:underline">
+                        <a
+                          href={"/master-user/ban-hanh" + "/" + document.id}
+                          className="text-blue-500 hover:underline"
+                        >
                           {document.title}
                         </a>
                       </td>
