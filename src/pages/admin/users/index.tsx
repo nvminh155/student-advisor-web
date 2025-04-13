@@ -57,24 +57,24 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/config/firebase";
-import { TRegisterRequest } from "@/types/register_request";
 import { useDocumentContractContext } from "@/contexts/document-contract-context";
 import { formatWalletAddress } from "@/utils/formatWalletAddress";
+import Loading from "@/components/loading";
+import { TContractUser } from "@/types";
+import { TRegisterRequest } from "@/types/register_request";
 
 // Types for our user registration data
 type UserStatus = "pending" | "approved" | "rejected";
 
 export default function AdminUsersPage() {
-  const { getEthereumContract } = useDocumentContractContext();
+  const { getEthereumContract, sendTransaction } = useDocumentContractContext();
 
   const [users, setUsers] = useState<TRegisterRequest[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<TRegisterRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<UserStatus | "all">("all");
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<TRegisterRequest | null>(
-    null
-  );
+  const [selectedUser, setSelectedUser] = useState<TRegisterRequest | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [actionType, setActionType] = useState<UserStatus | null>(null);
 
@@ -112,6 +112,31 @@ export default function AdminUsersPage() {
     };
 
     fetchUsers();
+    // const fetchUserV2 = async () => {
+    //   const contract = await getEthereumContract();
+
+    //   await contract.getUsers().then((tx: any) => {
+    //     console.log("User data:", tx);
+    //     const data = tx.map(
+    //       (res: {
+    //         _address: string;
+    //         userInfo: Omit<TContractUser, "_address">;
+    //       }) => {
+           
+    //         return {
+    //           _address: res._address,
+    //           fullName: res.userInfo.fullName,
+    //           role: res.userInfo.role,
+    //           email: res.userInfo.email,
+    //           status: res.userInfo.status,
+    //         } as TContractUser;
+    //       }
+    //     );
+
+    //     console.log("Transaction hash:", data);
+    //   });
+    // };
+    // fetchUserV2();
   }, [toast]);
 
   // Filter users based on search query and status filter
@@ -166,16 +191,17 @@ export default function AdminUsersPage() {
 
     const contract = await getEthereumContract();
 
-    const documentHash = await contract
+    await contract
       .approveRegister(
         selectedUser?.address,
         selectedUser?.fullName,
-        selectedUser?.role === "1" ? "Hiệu trưởng" : "Nhân viên",
+        selectedUser?.role,
         selectedUser?.email
       )
-      .then((tx: any) => {
+      .then(async (tx: any) => {
         console.log("Transaction hash:", tx.hash);
         updateUserStatus();
+        await sendTransaction(selectedUser?.address);
         return tx;
       })
       .catch((e) => {
@@ -259,6 +285,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className=" mx-auto py-6">
+      {/* <Loading isLoading={isLoading} className="bg-black/50 fixed w-full h-full z-10 justify-center" /> */}
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
@@ -339,7 +366,7 @@ export default function AdminUsersPage() {
                       <TableCell>{formatWalletAddress(user.address)}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
-                        {user.role === "1" ? "Hiệu trưởng" : "Nhân viên"}
+                        {user.role === "3" ? "Hiệu trưởng" : "Nhân viên"}
                       </TableCell>
                       <TableCell>{getStatusBadge(user.status)}</TableCell>
                       <TableCell className="text-right">

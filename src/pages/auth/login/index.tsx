@@ -25,43 +25,30 @@ import { TRegisterRequest } from "@/types/register_request";
 import { Wallet } from "lucide-react";
 
 export default function LoginPage() {
-  const { connectWallet, currentAccount } = useDocumentContractContext();
+  const { connectWallet, currentAccount, getEthereumContract } = useDocumentContractContext();
   const navigate = useNavigate();
 
   const [isConnecting, setIsConnecting] = useState(false);
 
   const checkUser = async () => {
-    const user = await getDoc(
-      doc(db, "register_requests", currentAccount ?? "")
-    );
+    const contract = await getEthereumContract();
 
-    if (user.exists()) {
-      const userData = user.data() as TRegisterRequest;
-      console.log(userData, "User data");
-      
-      if (userData.status === "approved") {
-        if (userData.role === "2") {
-          navigate("/dashboard");
-        } else if (userData.role === "1") {
-          navigate("/verify-documents");
-        }
+    await contract.handleLogin().then(user => {
+      console.log("User:", user);
+      if(!user) return;
 
-        toast("Login successfully", {
-          description: `Connected to ${currentAccount?.substring(
-            0,
-            6
-          )}...${currentAccount?.substring(currentAccount.length - 4)}`,
-        });
-      } else {
-        toast("User have not approved yet", {
-          description: "Please wait for admin approval",
-        });
+      if(user.status === 1n) {
+        navigate("/admin1")
       }
-    } else {
-      toast("User not found", {
-        description: "Please register first",
-      });
-    }
+
+      if(user.status === 3n) {
+        navigate("/master-user")
+      }
+    }).catch(err => {
+      console.error("Error checking user:", err);
+      toast("Login failed")
+    })
+
   };
 
   const handleConnectWallet = async () => {

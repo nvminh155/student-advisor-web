@@ -22,6 +22,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { v4 as uuidv4 } from "uuid";
+import { pythonAiService } from "@/services/pythonAi";
+import { useDocumentContractContext } from "@/contexts/document-contract-context";
 
 export interface IDocument {
   id: string;
@@ -38,12 +40,16 @@ interface DocumentsTableProps {
 }
 
 export function DocumentsTable({ year }: DocumentsTableProps) {
+  const { getEthereumContract } = useDocumentContractContext();
+
   const [documents, setDocuments] = useState<IDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [currentDocument, setCurrentDocument] = useState<IDocument | null>(null);
+  const [currentDocument, setCurrentDocument] = useState<IDocument | null>(
+    null
+  );
 
   const [formData, setFormData] = useState<IDocument>({
     documentNumber: "",
@@ -106,54 +112,36 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
     });
   };
 
-  const handleAddDocument = async () => {
-    console.log(formData);
-    try {
-      const payload_formdata = new FormData();
+  const createRecordOnContract = async () => {
+    const contract = await getEthereumContract();
+    const tx = await contract.createRecord(
+      formData.documentNumber,
+      formData.title,
+      formData.date,
+      formData.isActive,
+      formData.uploaded_files
+    );
+    await tx.wait();
+  };
 
-      if (!formData.uploaded_files) {
+
+  const handleAddDocument = async () => {
+    await pythonAiService
+      .addDocument(formData, year)
+      .then(() => {
+        resetForm();
+
+        toast("Success", {
+          description: "Document added successfully.",
+        });
+        setIsAddDialogOpen(false);
+      })
+      .catch((error) => {
         toast("Error", {
-          description: "Please upload files.",
+          description: error,
           richColors: true,
         });
-        return;
-      }
-
-      for (const file of formData.uploaded_files) {
-        payload_formdata.append("uploaded_files", file);
-      }
-
-      payload_formdata.append("documentNumber", formData.documentNumber);
-      payload_formdata.append("date", formData.date);
-      payload_formdata.append("title", formData.title);
-      payload_formdata.append("isActive", formData.isActive.toString());
-      payload_formdata.append("year", year);
-      payload_formdata.append("id", formData.id);
-
-      const res1 = await fetch("http://localhost:8000/upload", {
-        method: "POST",
-        body: payload_formdata,
       });
-
-      const data = await res1.json();
-      console.log("res1", data, res1);
-
-      if (data.err) {
-        throw new Error(data.err);
-      }
-
-      resetForm();
-      
-      toast("Success", {
-        description: "Document added successfully.",
-      });
-      setIsAddDialogOpen(false);
-    } catch (error) {
-      console.error("Error adding document:", error);
-      toast("Error", {
-        description: "Failed to add document. Please try again.",
-      });
-    }
   };
 
   const handleEditDocument = async () => {

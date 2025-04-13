@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-import { ethers } from "ethers";
+import { ethers, isAddress, parseEther, toBeHex } from "ethers";
 import documentContract from "@/utils/DocumentContract.json";
 
-const contractAddress = "0x7463db48d50ff0d286c0f48b6e0fa9c5439770d0"; // Replace with your contract address
+const contractAddress = "0x49bbe2226bf8120091cf20518f2f21178d744664"; // Replace with your contract address
 const abi = documentContract.abi;
 
 declare global {
@@ -17,9 +17,10 @@ const { ethereum } = window;
 console.log(ethereum, "Ethereum object");
 interface DocumentContractContextType {
   currentAccount: string | null;
-  connectWallet: () => Promise<void>;
+  connectWallet: () => Promise<any>;
   getEthereumContract: () => Promise<ethers.Contract>;
   checkIfWalletIsConnected: () => Promise<void>;
+  sendTransaction: (to: string) => Promise<void>;
 }
 
 const DocumentContractContext = createContext<DocumentContractContextType>({
@@ -32,6 +33,9 @@ const DocumentContractContext = createContext<DocumentContractContextType>({
   },
   checkIfWalletIsConnected: async () => {
     throw new Error("checkIfWalletIsConnected function not implemented.");
+  },
+  sendTransaction: async () => {
+    throw new Error("sendTransaction function not implemented.");
   },
 });
 
@@ -74,6 +78,11 @@ export const DocumentContractProvider = ({
 
       console.log("Connected account:", accounts[0]);
       setCurrentAccount(accounts[0]);
+
+      return {
+        message: "Login successfully",
+        status: 200
+      }
     } catch (error) {
       console.error("Error connecting to wallet:", error);
       throw new Error("No Ethereum object found. Please install MetaMask.");
@@ -92,13 +101,38 @@ export const DocumentContractProvider = ({
     });
 
     return contract;
-  };  
+  };
 
+  const sendTransaction = async (to: string) => {
+    try {
+      console.log("Ethereum object:", ethereum, to, currentAccount);
+      if (!ethereum) return alert("Please install MetaMask!");
+      if (!isAddress(to)) return alert("Địa chỉ người nhận không hợp lệ!");
+      if (!isAddress(currentAccount))
+        return alert("Tài khoản hiện tại không hợp lệ!");
 
+      await ethereum.request({
+        method: "eth_sendTransaction",
+        params: [
+          {
+            from: currentAccount,
+            to: to,
+            gas: "0x5208", // 21000 Gwei
+            value: toBeHex(parseEther("100")),
+          },
+        ],
+      });
+
+      console.log("Gửi thành công!");
+    } catch {
+      console.error("Error sending transaction:");
+      throw new Error("No Ethereum object found. Please install MetaMask.");
+    }
+  };
   const approveUserRegister = async () => {
     const contract = await getEthereumContract();
     const tx = await contract.approveRegister();
-  }
+  };
   // gas: 0x5208 = 21000 Gwei
 
   return (
@@ -108,6 +142,7 @@ export const DocumentContractProvider = ({
         connectWallet,
         checkIfWalletIsConnected,
         getEthereumContract,
+        sendTransaction,
       }}
     >
       {children}

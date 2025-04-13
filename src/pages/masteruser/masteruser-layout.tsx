@@ -63,53 +63,20 @@ export default function MasterUserLayout() {
                   Navigation
                 </h3>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === "/admin1"}
-                    >
-                      <Link to="/admin1">
-                        <Home />
-                        <span>Dashboard</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
 
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
-                      isActive={pathname === "/admin1/users"}
+                      isActive={pathname === "/master-user/ban-hanh"}
                     >
-                      <Link to="/admin1/users">
-                        <Users />
-                        <span>User Management</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === "/admin1/register-requests"}
-                    >
-                      <Link to="/admin1/register-requests">
+                      <Link to="/master-user/ban-hanh">
                         <ClipboardCheck />
-                        <span>Manage Register Requests</span>
+                        <span>Ban hành</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === "/admin1/settings"}
-                    >
-                      <Link to="/admin1/settings">
-                        <Settings />
-                        <span>Settings</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+        
                 </SidebarMenu>
               </div>
             </ScrollArea>
@@ -135,11 +102,11 @@ export default function MasterUserLayout() {
             <div className="flex items-center gap-2">
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
               <h1 className="text-lg font-semibold">
-                {pathname === "/admin1" && "Dashboard"}
-                {pathname === "/admin1/users" && "User Management"}
-                {pathname === "/admin1/register-requests" &&
+                {pathname === "/master-user" && "Dashboard"}
+                {pathname === "/master-user/users" && "User Management"}
+                {pathname === "/master-user/ban-hanh" &&
                   "Manage Register Requests"}
-                {pathname === "/admin1/settings" && "Settings"}
+                {pathname === "/master-user/settings" && "Settings"}
               </h1>
             </div>
           </header>

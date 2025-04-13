@@ -110,7 +110,7 @@ export default function RegisterPage() {
       });
 
       // Redirect to dashboard or home page
-      setTimeout(() => navigate("/dashboard"), 1500);
+      setTimeout(() => navigate("/login"), 1500);
     } catch (error) {
       console.error("Error registering:", error);
       toast("Registration failed", {
@@ -151,7 +151,7 @@ export default function RegisterPage() {
                 />
               </SelectTrigger>
               <SelectContent className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                <SelectItem value="1">Hiệu trưởng</SelectItem>
+                <SelectItem value="3">Hiệu trưởng</SelectItem>
                 <SelectItem value="2">Nhân viên</SelectItem>
               </SelectContent>
             </Select>
