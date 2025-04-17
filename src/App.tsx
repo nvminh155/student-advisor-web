@@ -16,10 +16,10 @@ function App() {
     <Routes>
       <Route path="/" element={<DashBoardLayout />}>
         <Route index element={<Dashboard />} />
-        <Route path="chat" element={<ChatContainer />} />
         <Route path="manage-file" element={<ManageFile />} />
         <Route path="manage-file/:year" element={<ManageFilePage />} />
       </Route>
+        <Route path="chat" element={<ChatContainer />} />
      
 
       <Route path="/admin1" element={<AdminLayout />}>

@@ -7,19 +7,19 @@ type TDocumentResponse = IDocument & {
 };
 
 export const pythonAiService = {
-  trainBotOnServer: async (year: string) => {
-    const queryFirebase = query(collection(db, "documents"));
+  trainBotOnServer: async (year: string, text_chunks: string[]) => {
+    // const queryFirebase = query(collection(db, "documents"));
 
-    const getDocumentFromFirebase = await getDocs(queryFirebase);
+    // const getDocumentFromFirebase = await getDocs(queryFirebase);
 
-    const documents = getDocumentFromFirebase.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as TDocumentResponse[];
+    // const documents = getDocumentFromFirebase.docs.map((doc) => ({
+    //   id: doc.id,
+    //   ...doc.data(),
+    // })) as TDocumentResponse[];
 
-    const documentsStillActive = documents.filter(
-      (doc) => doc.isActive === true
-    );
+    // const documentsStillActive = documents.filter(
+    //   (doc) => doc.isActive === true
+    // );
 
     const response = await fetch(
       "http://localhost:8000/train-bot-with-text-chunks",
@@ -29,9 +29,10 @@ export const pythonAiService = {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          text_chunks: documentsStillActive
-            .map((doc) => doc.text_chunks)
-            .flat(),
+          // text_chunks: documentsStillActive
+          //   .map((doc) => doc.text_chunks)
+          //   .flat(),
+          text_chunks,
           year: year,
         }),
       }

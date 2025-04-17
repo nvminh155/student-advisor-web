@@ -10,11 +10,14 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { pythonAiService } from "@/services/pythonAi";
 
 export default function ManageFilePage() {
   const year = new Date().getFullYear().toString();
 
-  
+
+
   return (
     <DashboardShell>
       <DashboardHeader heading={`Văn bản chỉ đạo - điều hành`} />
@@ -38,6 +41,7 @@ export default function ManageFilePage() {
         </Breadcrumb>
       </div>
       <DocumentsTable year={year} />
+
     </DashboardShell>
   );
 }

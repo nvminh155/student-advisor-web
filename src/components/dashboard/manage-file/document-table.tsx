@@ -63,6 +63,32 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
 
   // Fetch documents from Firebase
   useEffect(() => {
+    const functionMakeGroup = (data: IDocument[]) => {
+      const grouped: {
+        [documentNumber: string]: IDocument[];
+      } = {};
+
+      data.forEach((doc) => {
+        const { documentNumber } = doc;
+        if (!grouped[documentNumber]) {
+          grouped[documentNumber] = [];
+        }
+        grouped[documentNumber].push(doc);
+      });
+
+      // Gom content theo thứ tự id
+      const result = Object.entries(grouped).map(([docNumber, items]) => {
+        const sorted = items.sort((a, b) => Number(a.id) - Number(b.id));
+
+        console.log("itesm sorted", sorted);
+        const ids = sorted.map((item) => item.id).join(",");
+        return { ...sorted[0], id: ids };
+      });
+
+      console.log(result);
+
+      return result;
+    };
 
     const fetchDocumentOnContract = async () => {
       const contract = await getEthereumContract();
@@ -70,17 +96,19 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
         console.log(tx);
 
         setDocuments(
-          tx.map((item: any, i: number) => {
-            return {
-              documentNumber: item.documentNumber,
-              date: item.createdAt,
-              title: item.title,
-              isActive: item.status === "active" ? true : false,
-              id: item.id,
-              year: item.createdAt.split("-")[0],
-              uploaded_files: null,
-            } as IDocument;
-          })
+          functionMakeGroup(
+            tx.map((item: any) => {
+              return {
+                documentNumber: item.documentNumber,
+                date: item.createdAt,
+                title: item.title,
+                isActive: item.status === "active" ? true : false,
+                id: item.id,
+                year: item.createdAt.split("-")[0],
+                uploaded_files: null,
+              } as IDocument;
+            })
+          )
         );
       });
     };
@@ -107,41 +135,72 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
     });
   };
 
-  const createRecordOnContract = async () => {
+  const handleTrainLai = async () => {
     const contract = await getEthereumContract();
-    const tx = await contract.createRecord(
-      formData.documentNumber,
-      formData.title,
-      formData.date,
-      formData.isActive,
-      formData.uploaded_files
-    );
-    await tx.wait();
+
+    await Promise.all(
+      documents
+        .map((doc) => {
+          return doc.id.split(",");
+        })
+        .flat()
+        .map(async (id) => {
+          return await contract.getRecord(id);
+        })
+    ).then(async (res) => {
+      if (!res || res.length === 0) {
+        alert("NO DATA");
+        return;
+      }
+      console.log(res);
+      await pythonAiService
+        .trainBotOnServer(
+          "2025",
+          res.map((item) => (item.status === "active" ? item.content : ""))
+        )
+        .then((res) => {
+          console.log(res);
+        });
+    });
   };
 
   const handleAddDocument = async () => {
-   
     const contract = await getEthereumContract();
     try {
       await pythonAiService
         .addDocument(formData, year)
         .then(async (res) => {
           console.log(res);
-          await contract
-            .createRecord(
-              formData.documentNumber,
-              formData.title,
-              res.filename.slice(0, 4).join("</br>"),
-              formData.date,
+
+          const chunkSize = 4;
+          const chunks = [];
+
+          for (let i = 0; i < res.filename.length; i += chunkSize) {
+            chunks.push(res.filename.slice(i, i + chunkSize));
+          }
+
+          await Promise.all(
+            chunks.map(
+              async (chunk) =>
+                await contract
+                  .createRecord(
+                    formData.documentNumber,
+                    formData.title,
+                    chunk.join("</br>"),
+                    formData.date
+                  )
+                  .then((tx) => console.log("MY TEX", tx))
             )
-            .then((tx) => console.log("MY TEX", tx));
+          ).then((res) => {
+            console.log(res);
 
-          resetForm();
+            resetForm();
 
-          toast("Success", {
-            description: "Document added successfully.",
+            toast("Success", {
+              description: "Document added successfully.",
+            });
+            setIsAddDialogOpen(false);
           });
-          setIsAddDialogOpen(false);
         })
         .catch((error) => {
           console.error("Error adding document:", error);
@@ -216,15 +275,25 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
       await updateDoc(doc(db, "documents", document.id), {
         isActive: !document.isActive,
       });
+      const contract = await getEthereumContract();
 
-      setDocuments(
-        documents.map((doc) => (doc.id === document.id ? updatedDocument : doc))
-      );
-
-      toast("Success", {
-        description: `Document ${
-          updatedDocument.isActive ? "activated" : "deactivated"
-        } successfully.`,
+      await Promise.all(
+        document.id
+          .split(",")
+          .map(
+            async (id) =>
+              await contract.updateRecordStatus(
+                id,
+                document.isActive ? "inactive" : "active"
+              )
+          )
+      ).then((res) => {
+        console.log("res update status", res);
+        toast("Success", {
+          description: `Document ${
+            updatedDocument.isActive ? "activated" : "deactivated"
+          } successfully.`,
+        });
       });
     } catch (error) {
       console.error("Error toggling document status:", error);
@@ -694,6 +763,8 @@ export function DocumentsTable({ year }: DocumentsTableProps) {
           </DialogContent>
         </Dialog>
       )}
+
+      <Button onClick={handleTrainLai}>Train lại</Button>
     </div>
   );
 }
